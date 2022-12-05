@@ -5,3 +5,7 @@ version = 3
 [[package]]
 name = "calorie-counting"
 version = "0.1.0"
+
+[[package]]
+name = "rock-paper-scissors"
+version = "0.1.0"

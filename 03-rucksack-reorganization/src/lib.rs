@@ -121,6 +121,6 @@ mod tests {
         let input = include_str!("my.input");
         let ans = part_2(input);
 
-        assert_eq!(ans, 70)
+        assert_eq!(ans, 2515)
     }
 }

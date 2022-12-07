@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 #[derive(Debug)]
 struct Rucksack {
     pub items: Vec<char>,
@@ -58,6 +60,26 @@ pub fn part_1(input: &str) -> u64 {
         .sum()
 }
 
+pub fn part_2(input: &str) -> u64 {
+    let sacks: Vec<_> = input.trim().lines().map(Rucksack::parse).collect();
+    let groups: Vec<_> = sacks.chunks(3).collect();
+
+    let badges = groups.iter().map(|group| {
+        let in_all = group
+            .iter()
+            .map(|s| s.items.iter().cloned().collect())
+            .reduce(|x: HashSet<char>, y| x.intersection(&y).cloned().collect())
+            .unwrap();
+
+        let in_all: Vec<char> = in_all.into_iter().collect();
+        debug_assert_eq!(in_all.len(), 1);
+
+        in_all[0]
+    });
+
+    badges.map(char_to_score).sum()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,5 +106,21 @@ mod tests {
         assert_eq!(char_to_score('z'), 26);
         assert_eq!(char_to_score('A'), 27);
         assert_eq!(char_to_score('Z'), 52);
+    }
+
+    #[test]
+    fn example_input_part_2() {
+        let example_input = include_str!("example.input");
+        let ans = part_2(example_input);
+
+        assert_eq!(ans, 70)
+    }
+
+    #[test]
+    fn my_input_part_2() {
+        let input = include_str!("my.input");
+        let ans = part_2(input);
+
+        assert_eq!(ans, 70)
     }
 }

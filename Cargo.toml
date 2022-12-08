@@ -3,4 +3,5 @@ members = [
   "01-calorie-counting",
   "02-rock-paper-scissors",
   "03-rucksack-reorganization",
+  "04-camp-cleanup",
 ]

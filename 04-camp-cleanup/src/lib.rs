@@ -20,7 +20,7 @@ impl Pair {
         }
     }
 
-    fn is_overlapping(&self) -> bool {
+    fn is_fully_contained(&self) -> bool {
         self.left_contains_right() || self.right_contains_left()
     }
 
@@ -30,6 +30,40 @@ impl Pair {
 
     fn right_contains_left(&self) -> bool {
         self.right.from <= self.left.from && self.right.to >= self.left.to
+    }
+
+    fn is_overlapping(&self) -> bool {
+        self.left_overlaps_right() || self.right_overlaps_left() || self.is_fully_contained()
+    }
+
+    /// LLLLLL
+    ///   RRRRRR
+    /// This overlaps
+    ///
+    /// LLLLLLLLLLL
+    ///    RRRRR
+    /// This does NOT overlap on the border
+    ///
+    /// LLLLLLL
+    ///           RRRRRR
+    /// Does NOT overlap
+    fn left_overlaps_right(&self) -> bool {
+        self.left.from <= self.right.from
+            && self.left.to <= self.right.to
+            && self.right.from <= self.left.to
+    }
+
+    //      LLLLLLLL
+    //   RRRRRRR
+    // DOES
+    //
+    //         LLLLLLLLL
+    //  RRRRRR
+    //  does NOT
+    fn right_overlaps_left(&self) -> bool {
+        self.right.from <= self.left.from
+            && self.right.to <= self.left.to
+            && self.left.from <= self.right.to
     }
 }
 
@@ -59,6 +93,12 @@ impl Assignment {
 pub fn part_1(input: &str) -> usize {
     let pairs: Vec<Pair> = input.lines().map(Pair::parse).collect();
 
+    pairs.iter().filter(|p| p.is_fully_contained()).count()
+}
+
+pub fn part_2(input: &str) -> usize {
+    let pairs: Vec<Pair> = input.lines().map(Pair::parse).collect();
+
     pairs.iter().filter(|p| p.is_overlapping()).count()
 }
 
@@ -80,5 +120,32 @@ mod tests {
         let ans = part_1(input);
 
         assert_eq!(ans, 444);
+    }
+
+    #[test]
+    fn example_input_part_2() {
+        let input = include_str!("example.input");
+        let ans = part_2(input);
+
+        assert_eq!(ans, 4);
+    }
+
+    #[test]
+    fn test_overlapping_none() {
+        let pair = Pair::parse("2-4,6-8");
+
+        assert!(!pair.left_overlaps_right());
+        assert!(!pair.right_overlaps_left());
+        assert!(!pair.left_contains_right());
+        assert!(!pair.right_contains_left());
+        assert!(!pair.is_overlapping());
+    }
+
+    #[test]
+    fn my_input_part_2() {
+        let input = include_str!("my.input");
+        let ans = part_2(input);
+
+        assert_eq!(ans, 801);
     }
 }

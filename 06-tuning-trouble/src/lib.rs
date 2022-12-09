@@ -1,7 +1,5 @@
 use std::collections::HashSet;
 
-use itertools::{peek_nth, PeekingNext};
-
 pub fn part_1(input: &str) -> usize {
     let chars: Vec<_> = input.chars().collect();
     chars

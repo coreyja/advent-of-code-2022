@@ -82,6 +82,29 @@ pub fn part_1(input: &str) -> String {
     yard.stacks.iter_mut().map(|s| s.pop().unwrap()).collect()
 }
 
+pub fn part_2(input: &str) -> String {
+    let mut yard = CraneYard::parse(input);
+
+    for r in yard.rearrangments {
+        let mut holding_ground = vec![];
+        for _ in 0..r.count {
+            let from_c = {
+                let from = yard.stacks.get_mut(r.from).unwrap();
+                from.pop().unwrap()
+            };
+
+            holding_ground.push(from_c);
+        }
+
+        holding_ground.reverse();
+
+        let to = yard.stacks.get_mut(r.to).unwrap();
+        to.append(&mut holding_ground);
+    }
+
+    yard.stacks.iter_mut().map(|s| s.pop().unwrap()).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -152,5 +175,21 @@ mod tests {
         let ans = part_1(input);
 
         assert_eq!(ans, "QPJPLMNNR");
+    }
+
+    #[test]
+    fn example_input_part_2() {
+        let input = include_str!("example.input");
+        let ans = part_2(input);
+
+        assert_eq!(ans, "MCD");
+    }
+
+    #[test]
+    fn my_input_part_2() {
+        let input = include_str!("my.input");
+        let ans = part_2(input);
+
+        assert_eq!(ans, "BQDNWJPVJ");
     }
 }

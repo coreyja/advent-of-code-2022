@@ -109,6 +109,33 @@ fn part_1(input: &str) -> usize {
         .sum()
 }
 
+fn part_2(input: &str) -> usize {
+    let filesystem = FileSystem::parse(input);
+
+    let root = FileLike::Dir { path: "/".into() };
+
+    const TOTAL_SPACE: usize = 70_000_000;
+    const SPACE_NEEDED: usize = 30_000_000;
+
+    let used_space = filesystem.total_size(&root);
+    let space_available = TOTAL_SPACE - used_space;
+
+    let space_needed_to_delete = if space_available > SPACE_NEEDED {
+        panic!("We don't need to delete anything");
+    } else {
+        SPACE_NEEDED - space_available
+    };
+
+    filesystem
+        .files
+        .values()
+        .filter(|f| matches!(f, FileLike::Dir { .. }))
+        .filter(|dir| filesystem.total_size(dir) > space_needed_to_delete)
+        .map(|dir| filesystem.total_size(dir))
+        .min()
+        .unwrap()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -126,6 +153,22 @@ mod tests {
         let input = include_str!("my.input");
         let ans = part_1(input);
 
-        assert_eq!(ans, 95437);
+        assert_eq!(ans, 1086293);
+    }
+
+    #[test]
+    fn example_input_part_2() {
+        let input = include_str!("example.input");
+        let ans = part_2(input);
+
+        assert_eq!(ans, 24933642);
+    }
+
+    #[test]
+    fn my_input_part_2() {
+        let input = include_str!("my.input");
+        let ans = part_2(input);
+
+        assert_eq!(ans, 366028);
     }
 }

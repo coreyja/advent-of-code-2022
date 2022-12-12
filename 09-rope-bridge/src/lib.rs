@@ -104,33 +104,47 @@ impl Coord {
     }
 }
 
-pub fn part_1(input: &str) -> HashSet<Coord> {
+pub fn rope_course<const TAIL_COUNT: usize>(input: &str) -> HashSet<Coord>
+where
+    [Coord; TAIL_COUNT]: Default,
+{
     let input = PuzzleInput::parse(input);
 
     let mut head: Coord = Default::default();
-    let mut tail: Coord = Default::default();
 
-    let mut tails_visited: HashSet<Coord> = Default::default();
-    tails_visited.insert(tail);
+    assert!(TAIL_COUNT > 0, "Must have at least one tail");
+    let mut tails: [Coord; TAIL_COUNT] = Default::default();
+
+    let mut last_tail_visited: HashSet<Coord> = Default::default();
+    last_tail_visited.insert(tails[0]);
 
     for Movement { dir, count } in input.0 {
         for _ in 0..count {
             head = head.move_in_dir(&dir);
 
-            // Update the Tail to follow along
-            if head.distance_to(&tail) > 1 {
-                // Move tail to follow
-                for d in Direction::all() {
-                    if tail.needs_to_move_towards(&head, &d) {
-                        tail = tail.move_in_dir(&d);
+            for tail_index in 0..TAIL_COUNT {
+                let current_head = if tail_index == 0 {
+                    head
+                } else {
+                    tails[tail_index - 1]
+                };
+
+                if current_head.distance_to(&tails[tail_index]) > 1 {
+                    for d in Direction::all() {
+                        if tails[tail_index].needs_to_move_towards(&current_head, &d) {
+                            tails[tail_index] = tails[tail_index].move_in_dir(&d);
+                        }
+                    }
+
+                    if tail_index == TAIL_COUNT - 1 {
+                        last_tail_visited.insert(tails[tail_index]);
                     }
                 }
-                tails_visited.insert(tail);
             }
         }
     }
 
-    tails_visited
+    last_tail_visited
 }
 
 #[cfg(test)]
@@ -140,7 +154,7 @@ mod tests {
     #[test]
     fn test_example_part_1() {
         let input = include_str!("example.input");
-        let ans = part_1(input);
+        let ans = rope_course::<1>(input);
 
         let correct = [
             (0, 0),
@@ -179,8 +193,32 @@ mod tests {
     #[test]
     fn test_my_input_part_1() {
         let input = include_str!("my.input");
-        let ans = part_1(input);
+        let ans = rope_course::<1>(input);
 
         assert_eq!(ans.len(), 6498);
+    }
+
+    #[test]
+    fn test_example_nine_tail() {
+        let input = include_str!("example.input");
+        let ans = rope_course::<9>(input);
+
+        assert_eq!(ans.len(), 1);
+    }
+
+    #[test]
+    fn test_larger_example_nine_tail() {
+        let input = include_str!("larger_example.input");
+        let ans = rope_course::<9>(input);
+
+        assert_eq!(ans.len(), 36);
+    }
+
+    #[test]
+    fn test_my_nine_tail() {
+        let input = include_str!("my.input");
+        let ans = rope_course::<9>(input);
+
+        assert_eq!(ans.len(), 2531);
     }
 }

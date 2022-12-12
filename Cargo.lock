@@ -66,6 +66,10 @@ name = "rock-paper-scissors"
 version = "0.1.0"
 
 [[package]]
+name = "rope-bridge"
+version = "0.1.0"
+
+[[package]]
 name = "rucksack-reogranization"
 version = "0.1.0"
 

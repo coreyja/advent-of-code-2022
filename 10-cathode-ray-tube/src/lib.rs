@@ -1,4 +1,6 @@
-#[derive(Debug)]
+use std::collections::VecDeque;
+
+#[derive(Debug, Clone, Copy)]
 enum Command {
     Addx(isize),
     Noop,
@@ -28,35 +30,41 @@ impl Command {
 }
 
 pub fn part_1(input: &str) -> isize {
-    let commands: Vec<Command> = input.lines().map(Command::parse).collect();
+    let mut commands: VecDeque<Command> = input.lines().map(Command::parse).collect();
 
     let mut x_register = 1;
-    let mut cycle_count = 0;
+    let mut cycle_count = 1;
 
-    let important_cycle_counts: [usize; 6] = [20, 60, 100, 140, 180, 220].map(|x| x - 1);
+    let important_cycle_counts: [usize; 6] = [20, 60, 100, 140, 180, 220];
     let mut current_important_cycle_index = 0;
 
     let mut important_signal_strenghts: Vec<isize> = vec![];
 
-    for c in commands {
-        let original_x = x_register;
+    let mut current_addx_command = None;
 
-        if let Command::Addx(amount) = c {
-            x_register += amount;
-        }
+    loop {
+        // Starting a CPU Cycle
+        let c = if let Some(current_command) = current_addx_command {
+            current_addx_command = None;
 
-        cycle_count += c.cycle_count();
+            current_command
+        } else {
+            let next_command = commands.pop_front().expect("We ran out of commands");
 
-        if cycle_count >= important_cycle_counts[current_important_cycle_index] as isize {
-            let chosen_x_register =
-                if cycle_count == important_cycle_counts[current_important_cycle_index] as isize {
-                    x_register
-                } else {
-                    original_x
-                };
-            let signal_strength = ((important_cycle_counts[current_important_cycle_index] + 1)
-                as isize)
-                * chosen_x_register;
+            current_addx_command = if let Command::Addx(amount) = next_command {
+                Some(Command::Addx(amount))
+            } else {
+                None
+            };
+
+            Command::Noop
+        };
+
+        // Middle of Cycle
+        if cycle_count == important_cycle_counts[current_important_cycle_index] as isize {
+            dbg!(cycle_count, x_register, c);
+            let signal_strength =
+                ((important_cycle_counts[current_important_cycle_index]) as isize) * x_register;
 
             important_signal_strenghts.push(signal_strength);
 
@@ -66,6 +74,12 @@ pub fn part_1(input: &str) -> isize {
                 break;
             }
         }
+
+        // End of Cycle
+        if let Command::Addx(amount) = c {
+            x_register += amount;
+        }
+        cycle_count += 1;
     }
 
     important_signal_strenghts.iter().sum()

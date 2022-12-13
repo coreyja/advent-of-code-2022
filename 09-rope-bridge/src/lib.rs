@@ -53,16 +53,10 @@ impl PuzzleInput {
     }
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Default)]
 pub struct Coord {
     x: isize,
     y: isize,
-}
-
-impl Default for Coord {
-    fn default() -> Self {
-        Self { x: 0, y: 0 }
-    }
 }
 
 impl Coord {

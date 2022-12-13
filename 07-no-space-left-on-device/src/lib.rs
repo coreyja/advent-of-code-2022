@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    hash::Hash,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Debug)]
 enum FileLike {
@@ -97,7 +93,7 @@ impl FileSystem {
     }
 }
 
-fn part_1(input: &str) -> usize {
+pub fn part_1(input: &str) -> usize {
     let filesystem = FileSystem::parse(input);
 
     filesystem
@@ -109,7 +105,7 @@ fn part_1(input: &str) -> usize {
         .sum()
 }
 
-fn part_2(input: &str) -> usize {
+pub fn part_2(input: &str) -> usize {
     let filesystem = FileSystem::parse(input);
 
     let root = FileLike::Dir { path: "/".into() };

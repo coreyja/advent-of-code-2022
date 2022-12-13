@@ -29,7 +29,7 @@ impl Command {
     }
 }
 
-pub fn part_1(input: &str) -> isize {
+pub fn be_a_cpu(input: &str) -> isize {
     let mut commands: VecDeque<Command> = input.lines().map(Command::parse).collect();
 
     let mut x_register = 1;
@@ -61,18 +61,29 @@ pub fn part_1(input: &str) -> isize {
         };
 
         // Middle of Cycle
-        if cycle_count == important_cycle_counts[current_important_cycle_index] as isize {
-            dbg!(cycle_count, x_register, c);
+        // Record Signal Strengths
+        if current_important_cycle_index < important_cycle_counts.len()
+            && cycle_count == important_cycle_counts[current_important_cycle_index] as isize
+        {
             let signal_strength =
                 ((important_cycle_counts[current_important_cycle_index]) as isize) * x_register;
 
             important_signal_strenghts.push(signal_strength);
 
             current_important_cycle_index += 1;
-
-            if current_important_cycle_index >= important_cycle_counts.len() {
-                break;
-            }
+        }
+        // Draw Board
+        let m = (cycle_count - 1) % 40;
+        if (x_register - 1..=x_register + 1).contains(&m) {
+            print!("#");
+        } else {
+            print!(".");
+        }
+        if cycle_count % 40 == 0 {
+            println!();
+        }
+        if cycle_count == 240 {
+            break;
         }
 
         // End of Cycle
@@ -92,7 +103,7 @@ mod tests {
     #[test]
     fn test_example_input_part_1() {
         let input = include_str!("example.input");
-        let ans = part_1(input);
+        let ans = be_a_cpu(input);
 
         assert_eq!(ans, 13140);
     }
@@ -100,7 +111,7 @@ mod tests {
     #[test]
     fn test_my_input_part_1() {
         let input = include_str!("my.input");
-        let ans = part_1(input);
+        let ans = be_a_cpu(input);
 
         assert_eq!(ans, 17940);
     }

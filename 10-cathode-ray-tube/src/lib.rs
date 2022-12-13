@@ -58,14 +58,6 @@ pub fn part_1(input: &str) -> isize {
                 as isize)
                 * chosen_x_register;
 
-            dbg!(
-                cycle_count,
-                chosen_x_register,
-                signal_strength,
-                c,
-                x_register,
-                original_x
-            );
             important_signal_strenghts.push(signal_strength);
 
             current_important_cycle_index += 1;
@@ -96,6 +88,6 @@ mod tests {
         let input = include_str!("my.input");
         let ans = part_1(input);
 
-        assert_eq!(ans, 13140);
+        assert_eq!(ans, 17940);
     }
 }

@@ -21,6 +21,7 @@ impl Command {
         }
     }
 
+    #[allow(dead_code)]
     fn cycle_count(&self) -> isize {
         match self {
             Command::Noop => 1,

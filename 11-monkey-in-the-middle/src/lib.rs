@@ -184,7 +184,7 @@ impl Op {
         }
     }
 
-    fn run(&self, old: WorryLevels) -> WorryLevels {
+    fn run<const WORRY_DIVISOR: u64>(&self, old: WorryLevels) -> WorryLevels {
         let new: Vec<WorryLevel> = old
             .0
             .into_iter()
@@ -193,7 +193,19 @@ impl Op {
                 let right = self.right.apply(wl.current);
 
                 let new_wl = self.operator.run(left, right);
-                let new_wl = new_wl % wl.divisor;
+
+                // I don't know why the mod optimization breaks part 1
+                // Maybe something with the extra division throws off the
+                // Worry levels, but since division is an operation that doesn't
+                // totally make sense to me.
+                // What ends up working is only doing the optimization if we have
+                // a WORRY_DIVISOR of 1, and using the WORRY_DIVISOR if its would impact the
+                // worry level
+                let new_wl = if WORRY_DIVISOR == 1 {
+                    new_wl % wl.divisor
+                } else {
+                    new_wl / WORRY_DIVISOR
+                };
 
                 WorryLevel {
                     current: new_wl,
@@ -347,16 +359,10 @@ impl Forest {
         let starting_items = &monkey.items;
 
         for item in starting_items {
-            // Inspecting
             self.monkies[midx].inspection_count += 1;
 
             let new = item.clone();
-            let mut new = op.run(new.0);
-
-            // Worry level drops after inspection
-            // dbg!(&new);
-            new.divide_all_by::<WORRY_DIVISOR>();
-            // dbg!(&new);
+            let new = op.run::<WORRY_DIVISOR>(new.0);
 
             monkey.test.take_action(self, Item(new), monkey.index);
         }
@@ -380,12 +386,6 @@ pub fn part_1(input: &str) -> usize {
 
     parsed.monkies.sort_by_key(|m| m.inspection_count);
     parsed.monkies.reverse();
-
-    dbg!(parsed
-        .monkies
-        .iter()
-        .map(|m| m.inspection_count)
-        .collect::<Vec<_>>());
 
     parsed.monkies[0..2]
         .iter()

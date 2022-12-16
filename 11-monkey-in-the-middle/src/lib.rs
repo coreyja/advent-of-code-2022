@@ -1,61 +1,107 @@
-use std::ops::{Add, Div, Mul, Rem, Sub};
-
-use num_bigint::BigUint;
+use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Debug, Clone, PartialEq, Default)]
-struct WorryLevel(BigUint);
-
-impl Add<WorryLevel> for WorryLevel {
-    type Output = WorryLevel;
-
-    fn add(self, rhs: WorryLevel) -> Self::Output {
-        (self.0 + rhs.0).into()
+struct WorryLevels(Vec<WorryLevel>);
+impl WorryLevels {
+    fn divide_all_by(&mut self, worry_divisor: u64) {
+        for x in self.0.iter_mut() {
+            x.current /= worry_divisor;
+        }
     }
 }
 
-impl Sub<WorryLevel> for WorryLevel {
-    type Output = WorryLevel;
-
-    fn sub(self, rhs: WorryLevel) -> Self::Output {
-        (self.0 - rhs.0).into()
+#[derive(Debug, Clone, PartialEq, Default)]
+struct WorryLevel {
+    current: u64,
+    divisor: u64,
+}
+impl WorryLevel {
+    fn is_divisible(&self) -> bool {
+        self.current % self.divisor == 0
     }
 }
 
-impl Mul<WorryLevel> for WorryLevel {
-    type Output = WorryLevel;
+impl Add<u64> for WorryLevels {
+    type Output = WorryLevels;
 
-    fn mul(self, rhs: WorryLevel) -> Self::Output {
-        (self.0 * rhs.0).into()
+    fn add(self, rhs: u64) -> Self::Output {
+        let transformed_vec = self
+            .0
+            .into_iter()
+            .map(|WorryLevel { current, divisor }| {
+                let new = (current + rhs) % divisor;
+
+                WorryLevel {
+                    current: new,
+                    divisor,
+                }
+            })
+            .collect();
+
+        Self(transformed_vec)
     }
 }
 
-impl Div<WorryLevel> for WorryLevel {
-    type Output = WorryLevel;
+impl Sub<u64> for WorryLevels {
+    type Output = WorryLevels;
 
-    fn div(self, rhs: WorryLevel) -> Self::Output {
-        (self.0 / rhs.0).into()
+    fn sub(self, rhs: u64) -> Self::Output {
+        let transformed_vec = self
+            .0
+            .into_iter()
+            .map(|WorryLevel { current, divisor }| {
+                let new = (current - rhs) % divisor;
+
+                WorryLevel {
+                    current: new,
+                    divisor,
+                }
+            })
+            .collect();
+
+        Self(transformed_vec)
     }
 }
 
-impl Div<u64> for WorryLevel {
-    type Output = WorryLevel;
+impl Mul<u64> for WorryLevels {
+    type Output = WorryLevels;
+
+    fn mul(self, rhs: u64) -> Self::Output {
+        let transformed_vec = self
+            .0
+            .into_iter()
+            .map(|WorryLevel { current, divisor }| {
+                let new = (current * rhs) % divisor;
+
+                WorryLevel {
+                    current: new,
+                    divisor,
+                }
+            })
+            .collect();
+
+        Self(transformed_vec)
+    }
+}
+
+impl Div<u64> for WorryLevels {
+    type Output = WorryLevels;
 
     fn div(self, rhs: u64) -> Self::Output {
-        (self.0 / rhs).into()
-    }
-}
+        let transformed_vec = self
+            .0
+            .into_iter()
+            .map(|WorryLevel { current, divisor }| {
+                let new = (current / rhs) % divisor;
 
-impl Rem<u64> for WorryLevel {
-    type Output = WorryLevel;
+                WorryLevel {
+                    current: new,
+                    divisor,
+                }
+            })
+            .collect();
 
-    fn rem(self, rhs: u64) -> Self::Output {
-        (self.0 % rhs).into()
-    }
-}
-
-impl From<BigUint> for WorryLevel {
-    fn from(val: BigUint) -> Self {
-        WorryLevel(val)
+        Self(transformed_vec)
     }
 }
 
@@ -78,7 +124,7 @@ impl BinaryOperator {
         }
     }
 
-    fn run(&self, left: WorryLevel, right: WorryLevel) -> Item {
+    fn run(&self, left: u64, right: u64) -> u64 {
         let worry_level = match self {
             BinaryOperator::Plus => left + right,
             BinaryOperator::Minus => left - right,
@@ -86,36 +132,36 @@ impl BinaryOperator {
             BinaryOperator::Divide => left / right,
         };
 
-        Item(worry_level)
+        worry_level
     }
 }
 
 #[derive(Debug, Clone)]
-enum OldOrWorryLevel {
+enum OldOrNumber {
     Old,
-    Number(WorryLevel),
+    Number(u64),
 }
 
-impl OldOrWorryLevel {
-    fn parse(input: &str) -> OldOrWorryLevel {
+impl OldOrNumber {
+    fn parse(input: &str) -> OldOrNumber {
         match input {
-            "old" => OldOrWorryLevel::Old,
-            x => OldOrWorryLevel::Number(WorryLevel(x.parse().unwrap())),
+            "old" => OldOrNumber::Old,
+            x => OldOrNumber::Number(x.parse().unwrap()),
         }
     }
 
-    fn apply(&self, old: Item) -> WorryLevel {
+    fn apply(&self, old: u64) -> u64 {
         match self {
-            OldOrWorryLevel::Old => old.0,
-            OldOrWorryLevel::Number(x) => x.clone(),
+            OldOrNumber::Old => old,
+            OldOrNumber::Number(x) => x.clone(),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 struct Op {
-    left: OldOrWorryLevel,
-    right: OldOrWorryLevel,
+    left: OldOrNumber,
+    right: OldOrNumber,
     operator: BinaryOperator,
 }
 
@@ -127,8 +173,8 @@ impl Op {
         let op = split.next().unwrap();
         let right = split.next().unwrap();
 
-        let left = OldOrWorryLevel::parse(left);
-        let right = OldOrWorryLevel::parse(right);
+        let left = OldOrNumber::parse(left);
+        let right = OldOrNumber::parse(right);
         let operator = BinaryOperator::parse(op);
 
         Self {
@@ -138,36 +184,40 @@ impl Op {
         }
     }
 
-    fn run(&self, old: Item) -> Item {
-        let left = self.left.apply(old.clone());
-        let right = self.right.apply(old);
+    fn run(&self, old: WorryLevels) -> WorryLevels {
+        let new: Vec<WorryLevel> = old
+            .0
+            .into_iter()
+            .map(|wl| {
+                let left = self.left.apply(wl.current);
+                let right = self.right.apply(wl.current);
 
-        self.operator.run(left, right)
+                let new_wl = self.operator.run(left, right);
+                let new_wl = new_wl % wl.divisor;
+
+                WorryLevel {
+                    current: new_wl,
+                    divisor: wl.divisor,
+                }
+            })
+            .collect();
+
+        WorryLevels(new)
     }
 }
 
 #[derive(Debug, Clone)]
-struct Item(WorryLevel);
-
-#[derive(Debug, Clone)]
-struct TestOp(u64);
-
-impl TestOp {
-    fn apply(&self, new: Item) -> bool {
-        new.0 % self.0 == Default::default()
-    }
-}
+struct Item(WorryLevels);
 
 #[derive(Debug, Clone)]
 struct Test {
-    test_op: TestOp,
     true_index: usize,
     false_index: usize,
 }
 
 impl Test {
-    fn take_action(&self, forest: &mut Forest, new: Item) {
-        let new_idx = if self.test_op.apply(new.clone()) {
+    fn take_action(&self, forest: &mut Forest, new: Item, midx: usize) {
+        let new_idx = if new.0 .0[midx].is_divisible() {
             self.true_index
         } else {
             self.false_index
@@ -186,7 +236,16 @@ struct Monkey {
     inspection_count: usize,
 }
 
-impl Monkey {
+#[derive(Debug, Clone)]
+struct InitialMonkey {
+    index: usize,
+    items: Vec<u64>,
+    operation: Op,
+    test: Test,
+    divisor: u64,
+}
+
+impl InitialMonkey {
     fn parse(input: &str) -> Self {
         let regex = regex::Regex::new(
             r"Monkey (?P<monkey_index>\d+):
@@ -203,20 +262,19 @@ impl Monkey {
         let monkey_index = captures.name("monkey_index").unwrap();
         let monkey_index = monkey_index.as_str().parse().unwrap();
 
+        let div = captures.name("div").unwrap();
+        let div = div.as_str().parse().unwrap();
+
         let items = captures.name("starting_items").unwrap();
         let items = items
             .as_str()
             .trim()
             .split(", ")
-            .map(|x| Item(WorryLevel(x.parse().unwrap())))
+            .map(|x| x.parse().unwrap())
             .collect();
 
         let operation = captures.name("op").unwrap();
         let operation = Op::parse(operation.as_str());
-
-        let div = captures.name("div").unwrap();
-        let div = div.as_str().parse().unwrap();
-        let test_op = TestOp(div);
 
         let true_index = captures.name("true_index").unwrap();
         let true_index = true_index.as_str().parse().unwrap();
@@ -225,7 +283,6 @@ impl Monkey {
         let false_index = false_index.as_str().parse().unwrap();
 
         let test = Test {
-            test_op,
             true_index,
             false_index,
         };
@@ -235,6 +292,32 @@ impl Monkey {
             items,
             operation,
             test,
+            divisor: div,
+        }
+    }
+
+    fn into_monkey(self, monkies: &[InitialMonkey]) -> Monkey {
+        let items = self
+            .items
+            .into_iter()
+            .map(|item| {
+                let worry_levels: Vec<WorryLevel> = monkies
+                    .iter()
+                    .map(|m| WorryLevel {
+                        current: item,
+                        divisor: m.divisor,
+                    })
+                    .collect();
+
+                Item(WorryLevels(worry_levels))
+            })
+            .collect();
+
+        Monkey {
+            index: self.index,
+            items,
+            operation: self.operation,
+            test: self.test,
             inspection_count: 0,
         }
     }
@@ -247,7 +330,12 @@ struct Forest {
 
 impl Forest {
     fn parse(input: &str) -> Self {
-        let monkies = input.split("\n\n").map(Monkey::parse).collect();
+        let monkies: Vec<_> = input.split("\n\n").map(InitialMonkey::parse).collect();
+
+        let monkies = monkies
+            .iter()
+            .map(|im| im.clone().into_monkey(&monkies))
+            .collect();
 
         Self { monkies }
     }
@@ -255,7 +343,6 @@ impl Forest {
     fn throw_items<const WORRY_DIVISOR: u64>(&mut self, midx: usize) {
         let monkey = &self.monkies[midx].clone();
         let op = &monkey.operation;
-        let div = self.monkies[midx].test.test_op.0;
 
         let starting_items = &monkey.items;
 
@@ -264,12 +351,12 @@ impl Forest {
             self.monkies[midx].inspection_count += 1;
 
             let new = item.clone();
-            let new = op.run(new);
+            let mut new = op.run(new.0);
 
             // Worry level drops after inspection
-            let new: Item = Item(new.0 / WORRY_DIVISOR);
+            new.divide_all_by(WORRY_DIVISOR);
 
-            monkey.test.take_action(self, new);
+            monkey.test.take_action(self, Item(new), monkey.index);
         }
 
         self.monkies[midx].items.clear();
@@ -340,11 +427,18 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Would never finish on current hardware"]
     fn test_example_input_part_2() {
         let input = include_str!("example.input");
         let ans = part_2(input);
 
         assert_eq!(ans, 2713310158);
+    }
+
+    #[test]
+    fn test_my_input_part_2() {
+        let input = include_str!("my.input");
+        let ans = part_2(input);
+
+        assert_eq!(ans, 13606755504);
     }
 }

@@ -1,3 +1,5 @@
+use num_bigint::BigUint;
+
 #[derive(Debug, Clone)]
 enum BinaryOperator {
     Plus,
@@ -17,7 +19,7 @@ impl BinaryOperator {
         }
     }
 
-    fn run(&self, left: usize, right: usize) -> Item {
+    fn run(&self, left: BigUint, right: BigUint) -> Item {
         let worry_level = match self {
             BinaryOperator::Plus => left + right,
             BinaryOperator::Minus => left - right,
@@ -30,30 +32,30 @@ impl BinaryOperator {
 }
 
 #[derive(Debug, Clone)]
-enum OldOrIndex {
+enum OldOrNumber {
     Old,
-    Idx(usize),
+    Number(BigUint),
 }
-impl OldOrIndex {
-    fn parse(input: &str) -> OldOrIndex {
+impl OldOrNumber {
+    fn parse(input: &str) -> OldOrNumber {
         match input {
-            "old" => OldOrIndex::Old,
-            x => OldOrIndex::Idx(x.parse().unwrap()),
+            "old" => OldOrNumber::Old,
+            x => OldOrNumber::Number(x.parse().unwrap()),
         }
     }
 
-    fn apply(&self, old: Item) -> usize {
+    fn apply(&self, old: Item) -> BigUint {
         match self {
-            OldOrIndex::Old => old.0,
-            OldOrIndex::Idx(x) => *x,
+            OldOrNumber::Old => old.0,
+            OldOrNumber::Number(x) => x.clone(),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 struct Op {
-    left: OldOrIndex,
-    right: OldOrIndex,
+    left: OldOrNumber,
+    right: OldOrNumber,
     operator: BinaryOperator,
 }
 
@@ -65,8 +67,8 @@ impl Op {
         let op = split.next().unwrap();
         let right = split.next().unwrap();
 
-        let left = OldOrIndex::parse(left);
-        let right = OldOrIndex::parse(right);
+        let left = OldOrNumber::parse(left);
+        let right = OldOrNumber::parse(right);
         let operator = BinaryOperator::parse(op);
 
         Self {
@@ -77,25 +79,22 @@ impl Op {
     }
 
     fn run(&self, old: Item) -> Item {
-        let left = self.left.apply(old);
+        let left = self.left.apply(old.clone());
         let right = self.right.apply(old);
 
         self.operator.run(left, right)
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-struct Item(usize);
+#[derive(Debug, Clone)]
+struct Item(BigUint);
 
 #[derive(Debug, Clone)]
-enum TestOp {
-    Divisible(usize),
-}
+struct TestOp(BigUint);
+
 impl TestOp {
     fn apply(&self, new: Item) -> bool {
-        match self {
-            TestOp::Divisible(div) => new.0 % div == 0,
-        }
+        new.0 % self.0.clone() == BigUint::default()
     }
 }
 
@@ -108,7 +107,7 @@ struct Test {
 
 impl Test {
     fn take_action(&self, forest: &mut Forest, new: Item) {
-        let new_idx = if self.test_op.apply(new) {
+        let new_idx = if self.test_op.apply(new.clone()) {
             self.true_index
         } else {
             self.false_index
@@ -157,7 +156,7 @@ impl Monkey {
 
         let div = captures.name("div").unwrap();
         let div = div.as_str().parse().unwrap();
-        let test_op = TestOp::Divisible(div);
+        let test_op = TestOp(div);
 
         let true_index = captures.name("true_index").unwrap();
         let true_index = true_index.as_str().parse().unwrap();
@@ -193,19 +192,22 @@ impl Forest {
         Self { monkies }
     }
 
-    fn throw_items(&mut self, midx: usize) {
+    fn throw_items<const WORRY_DIVISOR: u128>(&mut self, midx: usize) {
         let monkey = &self.monkies[midx].clone();
         let op = &monkey.operation;
+        let div = self.monkies[midx].test.test_op.0.clone();
 
         let starting_items = &monkey.items;
 
         for item in starting_items {
             // Inspecting
             self.monkies[midx].inspection_count += 1;
-            let new = op.run(*item);
+
+            let new = item.clone();
+            let new = op.run(new);
 
             // Worry level drops after inspection
-            let new: Item = Item(new.0 / 3);
+            let new: Item = Item(new.0 / WORRY_DIVISOR);
 
             monkey.test.take_action(self, new);
         }
@@ -213,9 +215,9 @@ impl Forest {
         self.monkies[midx].items.clear();
     }
 
-    fn round(&mut self) {
+    fn round<const WORRY_DIVISOR: u128>(&mut self) {
         for i in 0..self.monkies.len() {
-            self.throw_items(i);
+            self.throw_items::<WORRY_DIVISOR>(i);
         }
     }
 }
@@ -224,7 +226,27 @@ pub fn part_1(input: &str) -> usize {
     let mut parsed = Forest::parse(input);
 
     for _ in 0..20 {
-        parsed.round();
+        parsed.round::<3>();
+    }
+
+    parsed.monkies.sort_by_key(|m| m.inspection_count);
+    parsed.monkies.reverse();
+
+    parsed.monkies[0..2]
+        .iter()
+        .map(|m| m.inspection_count)
+        .reduce(|accum, item| accum * item)
+        .unwrap()
+}
+
+pub fn part_2(input: &str) -> usize {
+    let mut parsed = Forest::parse(input);
+
+    for i in 0..10000 {
+        if i % 100 == 0 {
+            dbg!(i);
+        };
+        parsed.round::<1>();
     }
 
     parsed.monkies.sort_by_key(|m| m.inspection_count);
@@ -254,6 +276,14 @@ mod tests {
         let input = include_str!("my.input");
         let ans = part_1(input);
 
-        assert_eq!(ans, 10605);
+        assert_eq!(ans, 54752);
+    }
+
+    #[test]
+    fn test_example_input_part_2() {
+        let input = include_str!("example.input");
+        let ans = part_2(input);
+
+        assert_eq!(ans, 2713310158);
     }
 }

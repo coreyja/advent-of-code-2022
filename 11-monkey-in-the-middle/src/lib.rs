@@ -3,9 +3,9 @@ use std::ops::{Add, Div, Mul, Sub};
 #[derive(Debug, Clone, PartialEq, Default)]
 struct WorryLevels(Vec<WorryLevel>);
 impl WorryLevels {
-    fn divide_all_by(&mut self, worry_divisor: u64) {
+    fn divide_all_by<const WORRY_DIVISOR: u64>(&mut self) {
         for x in self.0.iter_mut() {
-            x.current /= worry_divisor;
+            x.current /= WORRY_DIVISOR;
         }
     }
 }
@@ -354,7 +354,9 @@ impl Forest {
             let mut new = op.run(new.0);
 
             // Worry level drops after inspection
-            new.divide_all_by(WORRY_DIVISOR);
+            // dbg!(&new);
+            new.divide_all_by::<WORRY_DIVISOR>();
+            // dbg!(&new);
 
             monkey.test.take_action(self, Item(new), monkey.index);
         }
@@ -378,6 +380,12 @@ pub fn part_1(input: &str) -> usize {
 
     parsed.monkies.sort_by_key(|m| m.inspection_count);
     parsed.monkies.reverse();
+
+    dbg!(parsed
+        .monkies
+        .iter()
+        .map(|m| m.inspection_count)
+        .collect::<Vec<_>>());
 
     parsed.monkies[0..2]
         .iter()

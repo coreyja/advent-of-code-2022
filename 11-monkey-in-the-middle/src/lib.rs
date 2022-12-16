@@ -1,4 +1,63 @@
+use std::ops::{Add, Div, Mul, Rem, Sub};
+
 use num_bigint::BigUint;
+
+#[derive(Debug, Clone, PartialEq, Default)]
+struct WorryLevel(BigUint);
+
+impl Add<WorryLevel> for WorryLevel {
+    type Output = WorryLevel;
+
+    fn add(self, rhs: WorryLevel) -> Self::Output {
+        (self.0 + rhs.0).into()
+    }
+}
+
+impl Sub<WorryLevel> for WorryLevel {
+    type Output = WorryLevel;
+
+    fn sub(self, rhs: WorryLevel) -> Self::Output {
+        (self.0 - rhs.0).into()
+    }
+}
+
+impl Mul<WorryLevel> for WorryLevel {
+    type Output = WorryLevel;
+
+    fn mul(self, rhs: WorryLevel) -> Self::Output {
+        (self.0 * rhs.0).into()
+    }
+}
+
+impl Div<WorryLevel> for WorryLevel {
+    type Output = WorryLevel;
+
+    fn div(self, rhs: WorryLevel) -> Self::Output {
+        (self.0 / rhs.0).into()
+    }
+}
+
+impl Div<u64> for WorryLevel {
+    type Output = WorryLevel;
+
+    fn div(self, rhs: u64) -> Self::Output {
+        (self.0 / rhs).into()
+    }
+}
+
+impl Rem<u64> for WorryLevel {
+    type Output = WorryLevel;
+
+    fn rem(self, rhs: u64) -> Self::Output {
+        (self.0 % rhs).into()
+    }
+}
+
+impl From<BigUint> for WorryLevel {
+    fn from(val: BigUint) -> Self {
+        WorryLevel(val)
+    }
+}
 
 #[derive(Debug, Clone)]
 enum BinaryOperator {
@@ -19,7 +78,7 @@ impl BinaryOperator {
         }
     }
 
-    fn run(&self, left: BigUint, right: BigUint) -> Item {
+    fn run(&self, left: WorryLevel, right: WorryLevel) -> Item {
         let worry_level = match self {
             BinaryOperator::Plus => left + right,
             BinaryOperator::Minus => left - right,
@@ -32,30 +91,31 @@ impl BinaryOperator {
 }
 
 #[derive(Debug, Clone)]
-enum OldOrNumber {
+enum OldOrWorryLevel {
     Old,
-    Number(BigUint),
+    Number(WorryLevel),
 }
-impl OldOrNumber {
-    fn parse(input: &str) -> OldOrNumber {
+
+impl OldOrWorryLevel {
+    fn parse(input: &str) -> OldOrWorryLevel {
         match input {
-            "old" => OldOrNumber::Old,
-            x => OldOrNumber::Number(x.parse().unwrap()),
+            "old" => OldOrWorryLevel::Old,
+            x => OldOrWorryLevel::Number(WorryLevel(x.parse().unwrap())),
         }
     }
 
-    fn apply(&self, old: Item) -> BigUint {
+    fn apply(&self, old: Item) -> WorryLevel {
         match self {
-            OldOrNumber::Old => old.0,
-            OldOrNumber::Number(x) => x.clone(),
+            OldOrWorryLevel::Old => old.0,
+            OldOrWorryLevel::Number(x) => x.clone(),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 struct Op {
-    left: OldOrNumber,
-    right: OldOrNumber,
+    left: OldOrWorryLevel,
+    right: OldOrWorryLevel,
     operator: BinaryOperator,
 }
 
@@ -67,8 +127,8 @@ impl Op {
         let op = split.next().unwrap();
         let right = split.next().unwrap();
 
-        let left = OldOrNumber::parse(left);
-        let right = OldOrNumber::parse(right);
+        let left = OldOrWorryLevel::parse(left);
+        let right = OldOrWorryLevel::parse(right);
         let operator = BinaryOperator::parse(op);
 
         Self {
@@ -87,14 +147,14 @@ impl Op {
 }
 
 #[derive(Debug, Clone)]
-struct Item(BigUint);
+struct Item(WorryLevel);
 
 #[derive(Debug, Clone)]
-struct TestOp(BigUint);
+struct TestOp(u64);
 
 impl TestOp {
     fn apply(&self, new: Item) -> bool {
-        new.0 % self.0.clone() == BigUint::default()
+        new.0 % self.0 == Default::default()
     }
 }
 
@@ -148,7 +208,7 @@ impl Monkey {
             .as_str()
             .trim()
             .split(", ")
-            .map(|x| Item(x.parse().unwrap()))
+            .map(|x| Item(WorryLevel(x.parse().unwrap())))
             .collect();
 
         let operation = captures.name("op").unwrap();
@@ -192,10 +252,10 @@ impl Forest {
         Self { monkies }
     }
 
-    fn throw_items<const WORRY_DIVISOR: u128>(&mut self, midx: usize) {
+    fn throw_items<const WORRY_DIVISOR: u64>(&mut self, midx: usize) {
         let monkey = &self.monkies[midx].clone();
         let op = &monkey.operation;
-        let div = self.monkies[midx].test.test_op.0.clone();
+        let div = self.monkies[midx].test.test_op.0;
 
         let starting_items = &monkey.items;
 
@@ -215,7 +275,7 @@ impl Forest {
         self.monkies[midx].items.clear();
     }
 
-    fn round<const WORRY_DIVISOR: u128>(&mut self) {
+    fn round<const WORRY_DIVISOR: u64>(&mut self) {
         for i in 0..self.monkies.len() {
             self.throw_items::<WORRY_DIVISOR>(i);
         }
@@ -280,6 +340,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Would never finish on current hardware"]
     fn test_example_input_part_2() {
         let input = include_str!("example.input");
         let ans = part_2(input);

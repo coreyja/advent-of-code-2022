@@ -2,13 +2,6 @@ use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 struct WorryLevels(Vec<WorryLevel>);
-impl WorryLevels {
-    fn divide_all_by<const WORRY_DIVISOR: u64>(&mut self) {
-        for x in self.0.iter_mut() {
-            x.current /= WORRY_DIVISOR;
-        }
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Default)]
 struct WorryLevel {
@@ -125,14 +118,12 @@ impl BinaryOperator {
     }
 
     fn run(&self, left: u64, right: u64) -> u64 {
-        let worry_level = match self {
+        match self {
             BinaryOperator::Plus => left + right,
             BinaryOperator::Minus => left - right,
             BinaryOperator::Multiply => left * right,
             BinaryOperator::Divide => left / right,
-        };
-
-        worry_level
+        }
     }
 }
 
@@ -153,7 +144,7 @@ impl OldOrNumber {
     fn apply(&self, old: u64) -> u64 {
         match self {
             OldOrNumber::Old => old,
-            OldOrNumber::Number(x) => x.clone(),
+            OldOrNumber::Number(x) => *x,
         }
     }
 }

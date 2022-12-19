@@ -29,16 +29,38 @@ impl Dir {
     const fn all() -> [Dir; 4] {
         [Dir::Up, Dir::Down, Dir::Left, Dir::Right]
     }
+
+    fn from_move(from: Coord, to: Coord) -> Dir {
+        let x_diff = from.0 - to.0;
+        let y_diff = from.1 - to.1;
+
+        match (x_diff, y_diff) {
+            (-1, 0) => Dir::Right,
+            (0, 1) => Dir::Up,
+            (1, 0) => Dir::Left,
+            (0, -1) => Dir::Down,
+            _ => panic!("Impossible Move"),
+        }
+    }
+
+    fn char(&self) -> char {
+        match self {
+            Dir::Up => '^',
+            Dir::Down => 'v',
+            Dir::Left => '<',
+            Dir::Right => '>',
+        }
+    }
 }
 impl MountainSide {
     fn neighbors(&self, original: Coord) -> impl Iterator<Item = Coord> + '_ {
-        let height = self.get(original).height();
+        let climbable_height = self.get(original).height() + 1;
 
         Dir::all()
             .into_iter()
             .map(move |d| original.in_direction(&d))
             .filter(|c| self.is_inbounds(*c))
-            .filter(move |x| height + 1 >= self.get(*x).height())
+            .filter(move |x| climbable_height >= self.get(*x).height())
     }
 
     fn is_inbounds(&self, c: Coord) -> bool {
@@ -80,6 +102,31 @@ impl MountainSide {
     fn target_pos(&self) -> Coord {
         self.search_for('E').unwrap()
     }
+
+    fn print_path(&self, path: &[Coord]) {
+        let mut chars = HashMap::<Coord, char>::new();
+
+        let moves: Vec<Dir> = path
+            .windows(2)
+            .map(|window| -> Dir { Dir::from_move(window[0], window[1]) })
+            .collect();
+
+        let mut current = self.starting_pos();
+        for m in moves {
+            chars.insert(current, m.char());
+
+            current = current.in_direction(&m);
+        }
+
+        for y in 0..self.height() {
+            for x in 0..self.width() {
+                let coord = Coord(x, y);
+                let char = chars.get(&coord).unwrap_or(&'.');
+                print!("{char}")
+            }
+            println!()
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
@@ -101,22 +148,30 @@ impl Coord {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct ToSearch(Coord, usize);
+struct ToSearch {
+    c: Coord,
+    estimated_distance: usize,
+}
 
 impl PartialOrd for ToSearch {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        other.1.partial_cmp(&self.1)
+        other
+            .estimated_distance
+            .partial_cmp(&self.estimated_distance)
     }
 }
 
 impl Ord for ToSearch {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        other.1.cmp(&self.1)
+        other.estimated_distance.cmp(&self.estimated_distance)
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-struct PathFrom(Coord, usize);
+struct PathFrom {
+    from: Coord,
+    current_distance: usize,
+}
 
 impl MountainSide {
     fn parse(input: &str) -> MountainSide {
@@ -136,43 +191,56 @@ impl MountainSide {
 
         let mut to_search = BinaryHeap::<ToSearch>::new();
 
-        let mut current_position = ToSearch(starting_pos, 1);
+        to_search.push(ToSearch {
+            c: starting_pos,
+            estimated_distance: 0,
+        });
 
-        while current_position.0 != target_pos {
-            for n in self.neighbors(current_position.0) {
+        while let Some(current_position) = to_search.pop() {
+            if current_position.c == target_pos {
+                break;
+            }
+
+            for n in self.neighbors(current_position.c) {
                 let existing_path = paths_from.get(&n);
 
-                let actual_cost = current_position.1 + 1;
+                let actual_cost = current_position.estimated_distance + 1;
                 let new_path = if let Some(existing_path) = existing_path {
-                    if existing_path.1 <= actual_cost {
+                    if existing_path.current_distance <= actual_cost {
                         continue;
-                    } else {
-                        PathFrom(current_position.0, actual_cost)
+                    }
+                    PathFrom {
+                        from: current_position.c,
+                        current_distance: actual_cost,
                     }
                 } else {
-                    PathFrom(current_position.0, actual_cost)
+                    PathFrom {
+                        from: current_position.c,
+                        current_distance: actual_cost,
+                    }
                 };
                 paths_from.insert(n, new_path);
 
-                let dist_estimation = new_path.1 + n.manhattan_distance(target_pos);
-                to_search.push(ToSearch(n, dist_estimation));
+                let dist_estimation = new_path.current_distance + n.manhattan_distance(target_pos);
+                to_search.push(ToSearch {
+                    c: n,
+                    estimated_distance: dist_estimation,
+                });
             }
-
-            current_position = to_search.pop().unwrap();
         }
 
         let mut actual_path: Vec<Coord> = vec![target_pos];
         let mut curr: Coord = target_pos;
 
         while curr != starting_pos {
-            let prev = paths_from.get(&curr).unwrap().0;
+            let prev = paths_from.get(&curr).unwrap().from;
             actual_path.push(prev);
             curr = prev;
         }
 
         actual_path.reverse();
 
-        dbg!(&actual_path);
+        self.print_path(&actual_path);
 
         actual_path.len() - 1
     }
@@ -201,7 +269,7 @@ mod tests {
         let input = include_str!("my.input");
         let ans = part_1(input);
 
-        assert_eq!(ans, 31);
+        assert_ne!(ans, 441);
     }
 
     #[test]
@@ -219,5 +287,30 @@ mod tests {
         let ms: MountainSide = MountainSide::parse(input);
 
         assert_eq!(ms.neighbors(ms.starting_pos()).count(), 2);
+    }
+
+    #[test]
+    fn my_input_to_search_end_example() {
+        let input = include_str!("my.input");
+        let ms: MountainSide = MountainSide::parse(input);
+
+        assert_eq!(ms.starting_pos(), Coord(0, 20));
+        assert_eq!(ms.target_pos(), Coord(91, 20));
+    }
+
+    #[test]
+    fn my_starting_pos_has_neighbors() {
+        let input = include_str!("my.input");
+        let ms: MountainSide = MountainSide::parse(input);
+
+        assert_eq!(ms.neighbors(ms.starting_pos()).count(), 3);
+    }
+
+    #[test]
+    fn my_35_19_has_neighbors() {
+        let input = include_str!("my.input");
+        let ms: MountainSide = MountainSide::parse(input);
+
+        assert_eq!(ms.neighbors(Coord(35, 19)).count(), 4);
     }
 }

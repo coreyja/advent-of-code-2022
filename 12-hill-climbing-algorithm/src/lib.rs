@@ -1,4 +1,4 @@
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{BinaryHeap, HashMap, HashSet};
 
 #[derive(Debug, Clone, Copy)]
 struct Hill(u8);
@@ -27,7 +27,8 @@ enum Dir {
 
 impl Dir {
     const fn all() -> [Dir; 4] {
-        [Dir::Up, Dir::Down, Dir::Left, Dir::Right]
+        // [Dir::Up, Dir::Down, Dir::Left, Dir::Right]
+        [Dir::Down, Dir::Up, Dir::Right, Dir::Left]
     }
 
     fn from_move(from: Coord, to: Coord) -> Dir {
@@ -239,6 +240,10 @@ impl MountainSide {
         }
 
         actual_path.reverse();
+
+        // Assert path never repeats
+        let path_set: HashSet<_> = actual_path.iter().collect();
+        assert_eq!(path_set.len(), actual_path.len());
 
         self.print_path(&actual_path);
 

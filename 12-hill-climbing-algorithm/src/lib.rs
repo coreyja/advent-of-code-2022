@@ -152,6 +152,7 @@ impl Coord {
 struct ToSearch {
     c: Coord,
     estimated_distance: usize,
+    actual_cost: usize,
 }
 
 impl PartialOrd for ToSearch {
@@ -194,7 +195,8 @@ impl MountainSide {
 
         to_search.push(ToSearch {
             c: starting_pos,
-            estimated_distance: 0,
+            estimated_distance: starting_pos.manhattan_distance(target_pos),
+            actual_cost: 0,
         });
 
         while let Some(current_position) = to_search.pop() {
@@ -205,7 +207,7 @@ impl MountainSide {
             for n in self.neighbors(current_position.c) {
                 let existing_path = paths_from.get(&n);
 
-                let actual_cost = current_position.estimated_distance + 1;
+                let actual_cost = current_position.actual_cost + 1;
                 let new_path = if let Some(existing_path) = existing_path {
                     if existing_path.current_distance <= actual_cost {
                         continue;
@@ -226,6 +228,7 @@ impl MountainSide {
                 to_search.push(ToSearch {
                     c: n,
                     estimated_distance: dist_estimation,
+                    actual_cost: new_path.current_distance,
                 });
             }
         }
@@ -274,7 +277,7 @@ mod tests {
         let input = include_str!("my.input");
         let ans = part_1(input);
 
-        assert_ne!(ans, 441);
+        assert_eq!(ans, 425);
     }
 
     #[test]

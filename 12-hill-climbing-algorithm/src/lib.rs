@@ -11,6 +11,10 @@ impl Hill {
             x => x,
         }
     }
+
+    fn is_possible_starting_pos(&self) -> bool {
+        self.height() == b'a'
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -92,6 +96,20 @@ impl MountainSide {
         None
     }
 
+    fn all_coords(&self) -> Vec<Coord> {
+        let mut coords = Vec::with_capacity(self.width() as usize * self.height() as usize);
+
+        for y in 0..self.height() {
+            for x in 0..self.width() {
+                let c = Coord(x, y);
+
+                coords.push(c);
+            }
+        }
+
+        coords
+    }
+
     fn get(&self, Coord(x, y): Coord) -> Hill {
         self.hills[y as usize][x as usize]
     }
@@ -127,6 +145,12 @@ impl MountainSide {
             }
             println!()
         }
+    }
+
+    fn possible_starting_positions(&self) -> impl Iterator<Item = Coord> + '_ {
+        self.all_coords()
+            .into_iter()
+            .filter(|c| self.get(*c).is_possible_starting_pos())
     }
 }
 
@@ -185,10 +209,7 @@ impl MountainSide {
         Self { hills }
     }
 
-    fn count_steps(&self) -> usize {
-        let starting_pos: Coord = self.starting_pos();
-        let target_pos: Coord = self.target_pos();
-
+    fn count_steps(&self, starting_pos: Coord, target_pos: Coord) -> Option<usize> {
         let mut paths_from = HashMap::<Coord, PathFrom>::new();
 
         let mut to_search = BinaryHeap::<ToSearch>::new();
@@ -236,6 +257,10 @@ impl MountainSide {
         let mut actual_path: Vec<Coord> = vec![target_pos];
         let mut curr: Coord = target_pos;
 
+        if paths_from.get(&target_pos).is_none() {
+            return None;
+        }
+
         while curr != starting_pos {
             let prev = paths_from.get(&curr).unwrap().from;
             actual_path.push(prev);
@@ -248,16 +273,30 @@ impl MountainSide {
         let path_set: HashSet<_> = actual_path.iter().collect();
         assert_eq!(path_set.len(), actual_path.len());
 
-        self.print_path(&actual_path);
+        // self.print_path(&actual_path);
 
-        actual_path.len() - 1
+        Some(actual_path.len() - 1)
     }
 }
 
 pub fn part_1(input: &str) -> usize {
     let ms: MountainSide = MountainSide::parse(input);
 
-    ms.count_steps()
+    ms.count_steps(ms.starting_pos(), ms.target_pos())
+        .expect("We expect there to always be a path for Part 1")
+}
+
+pub fn part_2(input: &str) -> usize {
+    let ms: MountainSide = MountainSide::parse(input);
+
+    let target_pos = ms.target_pos();
+
+    let starting_positions = ms.possible_starting_positions();
+
+    starting_positions
+        .filter_map(|c| ms.count_steps(c, target_pos))
+        .min()
+        .unwrap()
 }
 
 #[cfg(test)]
@@ -320,5 +359,21 @@ mod tests {
         let ms: MountainSide = MountainSide::parse(input);
 
         assert_eq!(ms.neighbors(Coord(35, 19)).count(), 4);
+    }
+
+    #[test]
+    fn example_input_part_2() {
+        let input = include_str!("example.input");
+        let ans = part_2(input);
+
+        assert_eq!(ans, 29);
+    }
+
+    #[test]
+    fn my_input_part_2() {
+        let input = include_str!("my.input");
+        let ans = part_2(input);
+
+        assert_eq!(ans, 418);
     }
 }

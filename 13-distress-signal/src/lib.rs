@@ -1,6 +1,6 @@
 use serde_json::Value;
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct Packet {
     items: Vec<ListOrInteger>,
 }
@@ -20,7 +20,7 @@ impl Packet {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum ListOrInteger {
     List(Vec<ListOrInteger>),
     Integer(u64),
@@ -67,6 +67,12 @@ impl PartialOrd for ListOrInteger {
     }
 }
 
+impl Ord for ListOrInteger {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct PacketPair {
     left: Packet,
@@ -103,6 +109,24 @@ pub fn part_1(input: &str) -> usize {
         .sum()
 }
 
+pub fn part_2(input: &str) -> usize {
+    let input = input.replace("\n\n", "\n");
+    let mut packets: Vec<_> = input.trim().split('\n').map(Packet::parse).collect();
+
+    let first_divider = Packet::parse("[[2]]");
+    let second_divider = Packet::parse("[[6]]");
+
+    packets.push(first_divider.clone());
+    packets.push(second_divider.clone());
+
+    packets.sort();
+
+    let first_idx = packets.iter().position(|x| &first_divider == x).unwrap() + 1;
+    let second_idx = packets.iter().position(|x| &second_divider == x).unwrap() + 1;
+
+    first_idx * second_idx
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,6 +144,22 @@ mod tests {
         let input = include_str!("my.input");
         let ans = part_1(input);
 
-        assert_eq!(ans, 13);
+        assert_eq!(ans, 5390);
+    }
+
+    #[test]
+    fn part_2_example_input() {
+        let input = include_str!("example.input");
+        let ans = part_2(input);
+
+        assert_eq!(ans, 140);
+    }
+
+    #[test]
+    fn part_2_my_input() {
+        let input = include_str!("my.input");
+        let ans = part_2(input);
+
+        assert_eq!(ans, 19261);
     }
 }

@@ -12,4 +12,5 @@ members = [
   "10-cathode-ray-tube",
   "11-monkey-in-the-middle",
   "12-hill-climbing-algorithm",
+  "13-distress-signal",
 ]

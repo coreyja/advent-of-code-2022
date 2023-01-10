@@ -122,6 +122,7 @@ impl MountainSide {
         self.search_for('E').unwrap()
     }
 
+    #[allow(dead_code)]
     fn print_path(&self, path: &[Coord]) {
         let mut chars = HashMap::<Coord, char>::new();
 

@@ -19,10 +19,8 @@ impl Coord {
         let down_left = down.left();
         let down_right = down.right();
 
-        if let Some(floor) = frame.floor {
-            if down.1 >= floor {
-                return None;
-            }
+        if frame.floor_is_solid && down.1 >= frame.floor {
+            return None;
         }
 
         if !rocks.contains(&down) {
@@ -135,7 +133,7 @@ pub fn part_1(input: &str) -> u64 {
 pub fn part_2(input: &str) -> u64 {
     let parsed = Maze::parse(input);
 
-    let mut current: Frame = parsed.into_frame_with_floor();
+    let mut current: Frame = parsed.into_frame_with_floor(true);
     let mut count = 0;
 
     while let Some(f) = current.next() {
@@ -150,21 +148,16 @@ pub fn part_2(input: &str) -> u64 {
 struct Frame {
     turn: usize,
     rocks: HashSet<Coord>,
-    floor: Option<u64>,
+    floor: u64,
+    floor_is_solid: bool,
 }
 
 impl Maze {
     fn into_frame_without_floor(self) -> Frame {
-        let rocks = self.initial_rocks();
-
-        Frame {
-            turn: 0,
-            rocks,
-            floor: None,
-        }
+        self.into_frame_with_floor(false)
     }
 
-    fn into_frame_with_floor(self) -> Frame {
+    fn into_frame_with_floor(self, is_solid: bool) -> Frame {
         let rocks = self.initial_rocks();
         let max_y = rocks.iter().map(|c| c.1).max().unwrap();
         let floor = max_y + 2;
@@ -172,7 +165,8 @@ impl Maze {
         Frame {
             rocks,
             turn: 0,
-            floor: Some(floor),
+            floor: floor,
+            floor_is_solid: is_solid,
         }
     }
 }
@@ -180,8 +174,6 @@ impl Maze {
 const SAND_START: Coord = Coord(500, 0);
 
 impl Frame {
-    const DISTANCE_AFTER_HIGHEST_POINT_TO_CONSIDER_BEFORE_THE_INFINITE_VOID: u64 = 5;
-
     fn next(self) -> Option<Frame> {
         let mut sand = SAND_START;
 
@@ -195,7 +187,9 @@ impl Frame {
             // There is an infinite loop here if the sand falls forever
             // But if we can say for sure the sand is below all rocks,
             // we know it is going to keep falling and can be done
-            if sand.1 > self.highest_point_possible() {
+            if sand.1 > self.floor {
+                assert_eq!(self.floor_is_solid, false, "We couldn't get here if the floor was solid, cause the sand would have stopped on the floor");
+
                 return None;
             }
         }
@@ -207,12 +201,8 @@ impl Frame {
             turn: self.turn + 1,
             rocks: new_rocks,
             floor: self.floor,
+            floor_is_solid: self.floor_is_solid,
         })
-    }
-
-    fn highest_point_possible(&self) -> u64 {
-        self.rocks.iter().map(|x| x.1).max().unwrap()
-            + Self::DISTANCE_AFTER_HIGHEST_POINT_TO_CONSIDER_BEFORE_THE_INFINITE_VOID
     }
 }
 

@@ -13,10 +13,18 @@ impl Coord {
         Self(x, y)
     }
 
-    fn next_move(&self, rocks: &HashSet<Coord>) -> Option<Coord> {
+    #[inline(never)]
+    fn next_move(&self, frame: &Frame) -> Option<Coord> {
+        let rocks = &frame.rocks;
         let down = self.down();
         let down_left = down.left();
         let down_right = down.right();
+
+        if let Some(floor) = frame.floor {
+            if down.1 >= floor {
+                return None;
+            }
+        }
 
         if !rocks.contains(&down) {
             Some(down)
@@ -58,6 +66,7 @@ impl RockStructure {
         Self { vertices }
     }
 
+    #[inline(never)]
     fn rocks(&self) -> impl IntoIterator<Item = Coord> + '_ {
         self.vertices.windows(2).flat_map(|a| {
             let mut coords = vec![];
@@ -106,6 +115,7 @@ impl Maze {
 
     /// Returns a HashSet of Coordinates that represent the starting rocks for the maze
     /// built from the lines in the vertices
+    #[inline(never)]
     fn initial_rocks(&self) -> HashSet<Coord> {
         self.rocks.iter().flat_map(|r| r.rocks()).collect()
     }
@@ -114,7 +124,21 @@ impl Maze {
 pub fn part_1(input: &str) -> u64 {
     let parsed = Maze::parse(input);
 
-    let mut current: Frame = parsed.into();
+    let mut current: Frame = parsed.into_frame_without_floor();
+    let mut count = 0;
+
+    while let Some(f) = current.next() {
+        current = f;
+        count += 1;
+    }
+
+    count
+}
+
+pub fn part_2(input: &str) -> u64 {
+    let parsed = Maze::parse(input);
+
+    let mut current: Frame = parsed.into_frame_with_floor();
     let mut count = 0;
 
     while let Some(f) = current.next() {
@@ -129,13 +153,33 @@ pub fn part_1(input: &str) -> u64 {
 struct Frame {
     turn: usize,
     rocks: HashSet<Coord>,
+    floor: Option<u64>,
+    highest_point_possible: u64,
 }
 
-impl From<Maze> for Frame {
-    fn from(value: Maze) -> Self {
-        Self {
+impl Maze {
+    fn into_frame_without_floor(self) -> Frame {
+        let rocks = self.initial_rocks();
+
+        Frame {
             turn: 0,
-            rocks: value.initial_rocks(),
+            highest_point_possible: rocks.iter().map(|r| r.1).max().unwrap()
+                + Frame::DISTANCE_AFTER_HIGHEST_POINT_TO_CONSIDER_BEFORE_THE_INFINITE_VOID,
+            rocks,
+            floor: None,
+        }
+    }
+
+    fn into_frame_with_floor(self) -> Frame {
+        let rocks = self.initial_rocks();
+        let max_y = rocks.iter().map(|c| c.1).max().unwrap();
+        let floor = max_y + 2;
+
+        Frame {
+            rocks,
+            turn: 0,
+            highest_point_possible: floor + 1,
+            floor: Some(floor),
         }
     }
 }
@@ -143,31 +187,41 @@ impl From<Maze> for Frame {
 const SAND_START: Coord = Coord(500, 0);
 
 impl Frame {
-    fn next(&self) -> Option<Frame> {
+    const DISTANCE_AFTER_HIGHEST_POINT_TO_CONSIDER_BEFORE_THE_INFINITE_VOID: u64 = 5;
+
+    #[inline(never)]
+    fn next(self) -> Option<Frame> {
         let mut sand = SAND_START;
 
-        while let Some(s) = sand.next_move(&self.rocks) {
+        if self.rocks.contains(&SAND_START) {
+            return None;
+        }
+
+        while let Some(s) = sand.next_move(&self) {
             sand = s;
 
             // There is an infinite loop here if the sand falls forever
             // But if we can say for sure the sand is below all rocks,
             // we know it is going to keep falling and can be done
-            if sand.1 > self.lowest_rock_y() {
+            if sand.1 > self.highest_point_possible() {
                 return None;
             }
         }
 
-        let mut new_rocks = self.rocks.clone();
+        let mut new_rocks = self.rocks;
         new_rocks.insert(sand);
 
         Some(Frame {
             turn: self.turn + 1,
             rocks: new_rocks,
+            floor: self.floor,
+            highest_point_possible: self.highest_point_possible,
         })
     }
 
-    fn lowest_rock_y(&self) -> u64 {
-        self.rocks.iter().map(|r| r.1).max().unwrap()
+    #[inline(never)]
+    fn highest_point_possible(&self) -> u64 {
+        self.highest_point_possible
     }
 }
 
@@ -197,5 +251,21 @@ mod tests {
         let parsed = Maze::parse(input);
 
         assert_eq!(parsed.initial_rocks().len(), 20);
+    }
+
+    #[test]
+    fn example_input_part_2() {
+        let input = include_str!("example.input");
+        let ans = part_2(input);
+
+        assert_eq!(ans, 93);
+    }
+
+    #[test]
+    fn my_input_part_2() {
+        let input = include_str!("my.input");
+        let ans = part_2(input);
+
+        assert_eq!(ans, 26375);
     }
 }

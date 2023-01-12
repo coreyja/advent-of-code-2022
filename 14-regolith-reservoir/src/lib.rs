@@ -13,7 +13,6 @@ impl Coord {
         Self(x, y)
     }
 
-    #[inline(never)]
     fn next_move(&self, frame: &Frame) -> Option<Coord> {
         let rocks = &frame.rocks;
         let down = self.down();
@@ -66,7 +65,6 @@ impl RockStructure {
         Self { vertices }
     }
 
-    #[inline(never)]
     fn rocks(&self) -> impl IntoIterator<Item = Coord> + '_ {
         self.vertices.windows(2).flat_map(|a| {
             let mut coords = vec![];
@@ -115,7 +113,6 @@ impl Maze {
 
     /// Returns a HashSet of Coordinates that represent the starting rocks for the maze
     /// built from the lines in the vertices
-    #[inline(never)]
     fn initial_rocks(&self) -> HashSet<Coord> {
         self.rocks.iter().flat_map(|r| r.rocks()).collect()
     }
@@ -154,7 +151,6 @@ struct Frame {
     turn: usize,
     rocks: HashSet<Coord>,
     floor: Option<u64>,
-    highest_point_possible: u64,
 }
 
 impl Maze {
@@ -163,8 +159,6 @@ impl Maze {
 
         Frame {
             turn: 0,
-            highest_point_possible: rocks.iter().map(|r| r.1).max().unwrap()
-                + Frame::DISTANCE_AFTER_HIGHEST_POINT_TO_CONSIDER_BEFORE_THE_INFINITE_VOID,
             rocks,
             floor: None,
         }
@@ -178,7 +172,6 @@ impl Maze {
         Frame {
             rocks,
             turn: 0,
-            highest_point_possible: floor + 1,
             floor: Some(floor),
         }
     }
@@ -189,7 +182,6 @@ const SAND_START: Coord = Coord(500, 0);
 impl Frame {
     const DISTANCE_AFTER_HIGHEST_POINT_TO_CONSIDER_BEFORE_THE_INFINITE_VOID: u64 = 5;
 
-    #[inline(never)]
     fn next(self) -> Option<Frame> {
         let mut sand = SAND_START;
 
@@ -215,13 +207,12 @@ impl Frame {
             turn: self.turn + 1,
             rocks: new_rocks,
             floor: self.floor,
-            highest_point_possible: self.highest_point_possible,
         })
     }
 
-    #[inline(never)]
     fn highest_point_possible(&self) -> u64 {
-        self.highest_point_possible
+        self.rocks.iter().map(|x| x.1).max().unwrap()
+            + Self::DISTANCE_AFTER_HIGHEST_POINT_TO_CONSIDER_BEFORE_THE_INFINITE_VOID
     }
 }
 

@@ -26,52 +26,34 @@ pub fn part_1(input: &str, row: i64) -> usize {
 }
 
 #[inline(never)]
-pub fn part_2<const N: usize>(input: &str, max: i64) -> usize {
+pub fn part_2<const MAX: i64>(input: &str) -> i64 {
+    const FREQUENCY_PARAM: i64 = 4_000_000;
+
     let parsed = Zone::parse(input);
 
-    let mut cannont_contain_sensor: [bool; N] = [false; N];
+    let mut y = 0;
 
-    for s in parsed.sensors {
-        s.mark_no_beacon(&mut cannont_contain_sensor, max);
+    while y < MAX {
+        let mut x = 0;
+
+        while x < MAX {
+            let c = Coord { x, y };
+
+            let biggest_jump_possible = parsed.biggest_jump_possible(c);
+
+            let jump_x = if let Some(x) = biggest_jump_possible {
+                x
+            } else {
+                return c.x * FREQUENCY_PARAM + c.y;
+            };
+
+            x += jump_x
+        }
+
+        y += 1;
     }
 
-    let pos = cannont_contain_sensor
-        .iter()
-        .position(|&x| x == false)
-        .unwrap();
-
-    let x = pos / (max as usize);
-    let y = pos % (max as usize);
-
-    x * 4000000 + y
-
-    // parsed
-    //     .safe_locations()
-    //     .iter()
-    //     .filter(|c| !beacons.contains(c) && c.y == row)
-    //     .count()
-
-    // let xs: Vec<_> = (0..max).collect();
-
-    // let options: Vec<_> = xs
-    //     .iter()
-    //     .filter_map(|&x| {
-    //         for y in 0..max {
-    //             let c = Coord { x, y };
-
-    //             if !parsed.cannot_contain_beacon(c) {
-    //                 dbg!(c);
-    //                 return Some(c.x * 4000000 + c.y);
-    //             }
-    //         }
-
-    //         None
-    //     })
-    //     .collect();
-
-    // assert_eq!(options.len(), 1);
-
-    // options[0]
+    panic!("We looked at every coordinate and didn't find the whole");
 }
 
 #[derive(Debug)]
@@ -111,6 +93,14 @@ impl Zone {
     #[inline(never)]
     fn cannot_contain_beacon(&self, c: Coord) -> bool {
         self.sensors.iter().any(|s| s.cannot_contain_beacon(c))
+    }
+
+    fn biggest_jump_possible(&self, c: Coord) -> Option<i64> {
+        self.sensors
+            .iter()
+            .map(|s| s.jump_for(c))
+            .max()
+            .expect("There is at least one sensor")
     }
 }
 
@@ -218,6 +208,28 @@ impl Sensor {
             }
         }
     }
+
+    fn jump_for(&self, c: Coord) -> Option<i64> {
+        let dist_to_beacon = self.disance_to_closest_beacon as i64;
+
+        let x_diff = self.pos.x.abs_diff(c.x) as i64;
+        let y_diff = self.pos.y.abs_diff(c.y) as i64;
+        let dist = x_diff + y_diff;
+
+        if dist > dist_to_beacon {
+            None
+        } else {
+            let width_given_y_position = dist_to_beacon - y_diff;
+
+            let ans = if (self.pos.x - c.x) < 0 {
+                Some(width_given_y_position - x_diff + 1)
+            } else {
+                Some(width_given_y_position + x_diff + 1)
+            };
+
+            ans
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -256,7 +268,7 @@ mod tests {
     #[test]
     fn example_input_part_2() {
         let input = include_str!("example.input");
-        let ans = part_2::<{ 20 * 20 }>(input, 20);
+        let ans = part_2::<20>(input);
 
         assert_eq!(ans, 56000011);
     }
@@ -264,8 +276,24 @@ mod tests {
     #[test]
     fn my_input_part_2() {
         let input = include_str!("my.input");
-        let ans = part_2::<{ 4000000 * 4000000 }>(input, 4000000);
+        let ans = part_2::<4_000_000>(input);
 
-        assert_eq!(ans, 56000011);
+        assert_eq!(ans, 10961118625406);
+    }
+
+    #[test]
+    fn prove_option_ordering_works_as_i_think_it_does() {
+        assert!(None < Some(1));
+        assert!(Some(1) < Some(2));
+    }
+
+    #[test]
+    fn test_jumping() {
+        let input = include_str!("example.input");
+        let parsed = Zone::parse(input);
+
+        let jump = parsed.biggest_jump_possible(Coord { x: 10, y: 11 });
+
+        assert_eq!(jump, Some(4))
     }
 }
